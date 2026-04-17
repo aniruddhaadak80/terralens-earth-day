@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TerraLens 🌍 — See Your Planet. Shape Its Future.</title>
+  <meta name="description" content="An interactive 3D Earth visualization with AI-powered environmental storytelling. Explore CO₂ emissions, deforestation, ocean health, and biodiversity through an immersive globe experience powered by Google Gemini." />
+  <meta name="keywords" content="Earth Day, environment, 3D globe, AI, Google Gemini, sustainability, climate change, visualization" />
+  <meta property="og:title" content="TerraLens — See Your Planet. Shape Its Future." />
+  <meta property="og:description" content="Interactive 3D Earth visualization with AI-powered environmental storytelling." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loader-content">
+      <div class="earth-loader">
+        <div class="particle-ring"></div>
+        <div class="earth-emoji">🌍</div>
+      </div>
+      <h2 class="loader-title">TerraLens</h2>
+      <p class="loader-subtitle">Initializing planetary systems...</p>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app">
+    <!-- Header -->
+    <header id="main-header">
+      <div class="header-left">
+        <span class="logo-icon">🌍</span>
+        <h1 class="logo-text">TerraLens</h1>
+        <span class="logo-tagline">See Your Planet. Shape Its Future.</span>
+      </div>
+      <nav class="header-nav">
+        <button class="nav-btn active" data-layer="emissions" id="nav-emissions">
+          <span class="nav-icon">💨</span>
+          <span class="nav-label">CO₂</span>
+        </button>
+        <button class="nav-btn" data-layer="deforestation" id="nav-deforestation">
+          <span class="nav-icon">🌳</span>
+          <span class="nav-label">Forests</span>
+        </button>
+        <button class="nav-btn" data-layer="ocean" id="nav-ocean">
+          <span class="nav-icon">🌊</span>
+          <span class="nav-label">Oceans</span>
+        </button>
+        <button class="nav-btn" data-layer="biodiversity" id="nav-biodiversity">
+          <span class="nav-icon">🦋</span>
+          <span class="nav-label">Wildlife</span>
+        </button>
+      </nav>
+      <div class="header-right">
+        <button class="ai-toggle-btn" id="ai-toggle-btn">
+          <span class="ai-icon">✨</span>
+          <span>Ask Gemini</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 3D Globe Container -->
+    <div id="globe-container"></div>
+
+    <!-- Region Info Tooltip -->
+    <div id="region-tooltip" class="hidden">
+      <div class="tooltip-header">
+        <span class="tooltip-flag" id="tooltip-flag"></span>
+        <h3 id="tooltip-name"></h3>
+      </div>
+      <div class="tooltip-stats" id="tooltip-stats"></div>
+      <button class="tooltip-ask-btn" id="tooltip-ask-btn">
+        <span>✨</span> Ask Gemini about this region
+      </button>
+    </div>
+
+    <!-- Dashboard Panel -->
+    <div id="dashboard-panel">
+      <div class="stat-card" id="stat-co2">
+        <div class="stat-icon">💨</div>
+        <div class="stat-info">
+          <span class="stat-value" data-target="423.5">0</span>
+          <span class="stat-unit">ppm</span>
+          <span class="stat-label">CO₂ Concentration</span>
+        </div>
+        <div class="stat-trend up">↑ +2.4/yr</div>
+      </div>
+      <div class="stat-card" id="stat-temp">
+        <div class="stat-icon">🌡️</div>
+        <div class="stat-info">
+          <span class="stat-value" data-target="1.45">0</span>
+          <span class="stat-unit">°C</span>
+          <span class="stat-label">Temperature Anomaly</span>
+        </div>
+        <div class="stat-trend up">↑ +0.18/decade</div>
+      </div>
+      <div class="stat-card" id="stat-forest">
+        <div class="stat-icon">🌳</div>
+        <div class="stat-info">
+          <span class="stat-value" data-target="4.7">0</span>
+          <span class="stat-unit">M ha/yr</span>
+          <span class="stat-label">Forest Loss</span>
+        </div>
+        <div class="stat-trend down">↓ -10% vs 2020</div>
+      </div>
+      <div class="stat-card" id="stat-species">
+        <div class="stat-icon">🦋</div>
+        <div class="stat-info">
+          <span class="stat-value" data-target="44088">0</span>
+          <span class="stat-unit">species</span>
+          <span class="stat-label">Threatened Species</span>
+        </div>
+        <div class="stat-trend up">↑ +1,200/yr</div>
+      </div>
+    </div>
+
+    <!-- AI Chat Panel -->
+    <div id="chat-panel" class="hidden">
+      <div class="chat-header">
+        <div class="chat-title">
+          <span class="ai-sparkle">✨</span>
+          <h2>Gemini Earth Advisor</h2>
+        </div>
+        <button class="chat-close-btn" id="chat-close-btn">✕</button>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-message ai">
+          <div class="message-avatar">🌍</div>
+          <div class="message-content">
+            <p>Hello! I'm your <strong>Gemini Earth Advisor</strong>. Ask me anything about our planet's environment — from climate change to biodiversity, from ocean health to sustainable living.</p>
+            <p>You can also <strong>click on any region</strong> on the globe to get localized environmental insights!</p>
+            <div class="suggestion-chips">
+              <button class="chip" data-question="What are the biggest environmental challenges facing Earth today?">🌡️ Top challenges</button>
+              <button class="chip" data-question="Generate a personalized Earth Day pledge for me">📝 My Earth pledge</button>
+              <button class="chip" data-question="What are 5 impactful things I can do today to help the planet?">🌱 Take action</button>
+              <button class="chip" data-question="Tell me about the current state of the world's oceans">🌊 Ocean health</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-container">
+        <input type="text" id="chat-input" placeholder="Ask about our planet..." autocomplete="off" />
+        <button id="chat-send-btn" class="chat-send-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Earth Day Pledge Modal -->
+    <div id="pledge-modal" class="hidden">
+      <div class="pledge-content">
+        <button class="pledge-close" id="pledge-close">✕</button>
+        <div class="pledge-header">
+          <span class="pledge-icon">🌍</span>
+          <h2>Your Earth Day Pledge</h2>
+        </div>
+        <div class="pledge-body" id="pledge-body"></div>
+        <div class="pledge-actions">
+          <button class="pledge-share-btn" id="pledge-share">Share My Pledge 🚀</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
