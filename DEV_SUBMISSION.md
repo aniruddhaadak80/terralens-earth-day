@@ -26,18 +26,34 @@ When you click on a region's glowing marker, you don't just get a simple pop-up.
 
 ---
 
-## 📸 Demo
+## 📸 Features & Demo
 
-I've deployed the project live! You can check it out here:
+I've deployed the project live! You can personally experience the 3D interaction here:
 
 🚀 **[Experience TerraLens Live](https://aniruddhaadak80.github.io/terralens-earth-day/)**
 
-*(Check out this quick glimpse of the interface below:)*
+### The 3D Environmental Globe
+The interactive globe allows you to rotate Earth and cycle through different high-importance data layers like CO₂ emissions, the state of the Oceans, and Biodiversity hotspots.
 
-![TerraLens Interface Preview](https://raw.githubusercontent.com/aniruddhaadak80/terralens-earth-day/main/src/assets/hero.png) 
-*(Note: I'll be adding more screenshots to this post!)*
+![TerraLens Default Globe View](https://raw.githubusercontent.com/aniruddhaadak80/terralens-earth-day/main/src/assets/hero.png) 
+*(A high-level view showing the dark, space-glass UI and the emissions layer)*
 
-> **💡 Pro Tip:** Click around the globe to explore different regions, and try asking the Gemini chat panel to *"Generate a personalized Earth Day Pledge"* for you!
+![TerraLens Oceans Layer](https://raw.githubusercontent.com/aniruddhaadak80/terralens-earth-day/main/src/assets/oceans.png)
+*(Switching to the Oceans layer. Notice the animated KPI dashboard at the bottom updating in real-time!)*
+
+### The "Earth Advisor" AI Chat
+By clicking **"Ask Gemini"**, you unlock an interactive environmental storytelling interface. If you click on specific continent hotspots, the spatial mapping feeds that location's data right into Gemini!
+
+![Gemini Chat Interface](https://raw.githubusercontent.com/aniruddhaadak80/terralens-earth-day/main/src/assets/chat.png)
+*(The Gemini sidebar. It generates contextually-aware responses based exactly on what you're interacting with.)*
+
+### Generate Your Own Earth Pledge
+To promote real-world change beyond just looking at a screen, I programmed Gemini to construct highly personalized, realistically actionable **Earth Pledges** dynamically.
+
+![Earth Pledge Generator](https://raw.githubusercontent.com/aniruddhaadak80/terralens-earth-day/main/src/assets/pledge.png)
+*(A personalized, AI-generated pledge modal generated live using the `@google/generative-ai` SDK!)*
+
+> **💡 Pro Tip:** Try deploying it locally and asking the Gemini chat panel to *"Generate a personalized Earth Day Pledge"* for you!
 
 ---
 
