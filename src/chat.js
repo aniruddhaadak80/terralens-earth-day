@@ -4,6 +4,7 @@
  */
 
 import { sendMessage, askAboutRegion, generatePledge, isReady } from './gemini.js';
+import { sanitizeToFragment } from './sanitize.js';
 
 let chatPanel, chatMessages, chatInput, chatSendBtn, chatCloseBtn;
 let aiToggleBtn;
@@ -187,7 +188,9 @@ function addMessage(content, type, isHtml = false) {
   contentEl.className = 'message-content';
   
   if (isHtml) {
-    contentEl.innerHTML = content;
+    // Model output is filtered first and then added as real DOM nodes, so it
+    // never reaches an HTML sink.
+    contentEl.replaceChildren(sanitizeToFragment(content));
   } else {
     const p = document.createElement('p');
     p.textContent = content;
@@ -229,7 +232,9 @@ function showPledgeModal(content) {
   const modal = document.getElementById('pledge-modal');
   const body = document.getElementById('pledge-body');
   
-  body.innerHTML = content;
+  // Model output is filtered first and then added as real DOM nodes, so it
+  // never reaches an HTML sink.
+  body.replaceChildren(sanitizeToFragment(content));
   modal.classList.remove('hidden');
   modal.classList.add('visible');
 }
