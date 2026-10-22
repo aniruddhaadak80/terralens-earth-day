@@ -5,103 +5,34 @@
  * first: a model answer is not a trusted source of markup, and the prompt is
  * driven by what the user types.
  *
- * The sanitiser returns a DocumentFragment with the cleaned nodes, so the
- * result is added to the page as real DOM nodes instead of being handed to
- * innerHTML.
+ * The sanitiser walks the answer itself and builds the result out of real DOM
+ * nodes. Nothing is ever handed to innerHTML, so there is no HTML sink that
+ * untrusted text could reach.
+ *
+ * Rules:
+ *   - only the formatting elements below may become elements,
+ *   - an allowed element may not carry any attribute, so no event handler and
+ *     no javascript: URL can ever be introduced,
+ *   - everything else - including the text of a rejected tag - is kept as
+ *     plain text, so no sentence is lost.
  */
 
-// Elements that may appear in a model answer.
+// Elements the model is allowed to use.
 const ALLOWED_TAGS = new Set([
-  'P', 'BR', 'HR', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'MARK',
-  'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
-  'SPAN', 'DIV', 'A', 'CODE', 'PRE', 'BLOCKQUOTE', 'SMALL', 'SUB', 'SUP',
+  'p', 'br', 'hr', 'strong', 'b', 'em', 'i', 'u', 's', 'mark',
+  'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'span', 'div', 'code', 'pre', 'blockquote', 'small', 'sub', 'sup',
 ]);
 
-// Elements that are removed together with everything inside them.
-const DROP_WITH_CONTENT = new Set([
-  'SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'LINK', 'META', 'BASE',
-  'FORM', 'INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'SVG', 'MATH', 'TEMPLATE',
-  'NOSCRIPT', 'FRAME', 'FRAMESET', 'APPLET', 'AUDIO', 'VIDEO', 'SOURCE', 'CANVAS',
-]);
+// Elements without a closing tag.
+const VOID_TAGS = new Set(['br', 'hr']);
 
-// Attributes that may survive on a given element.
-const ALLOWED_ATTRIBUTES = {
-  A: new Set(['href', 'title']),
-  SPAN: new Set(['class']),
-  DIV: new Set(['class']),
-  P: new Set(['class']),
-  LI: new Set(['class']),
-  UL: new Set(['class']),
-  OL: new Set(['class']),
-  H1: new Set(['class']),
-  H2: new Set(['class']),
-  H3: new Set(['class']),
-  H4: new Set(['class']),
-  H5: new Set(['class']),
-  H6: new Set(['class']),
-  CODE: new Set(['class']),
-  PRE: new Set(['class']),
-  BLOCKQUOTE: new Set(['class']),
-};
-
-// Only these URL schemes may appear in an href.
-const SAFE_URL = /^(https?:\/\/|mailto:|#|\/|\.\/|\.\.\/)/i;
-
-function cleanElement(element) {
-  const tag = element.tagName.toUpperCase();
-
-  for (const attribute of Array.from(element.attributes)) {
-    const name = attribute.name.toLowerCase();
-
-    if (name.startsWith('on')) {
-      element.removeAttribute(attribute.name);
-      continue;
-    }
-
-    const allowed = ALLOWED_ATTRIBUTES[tag];
-    if (!allowed || !allowed.has(name)) {
-      element.removeAttribute(attribute.name);
-      continue;
-    }
-
-    if (name === 'href' && !SAFE_URL.test(attribute.value.trim())) {
-      element.removeAttribute(attribute.name);
-    }
-  }
-
-  if (tag === 'A') {
-    element.setAttribute('rel', 'noopener noreferrer');
-    element.setAttribute('target', '_blank');
-  }
-}
-
-function clean(node) {
-  for (const child of Array.from(node.children)) {
-    const tag = child.tagName.toUpperCase();
-
-    if (DROP_WITH_CONTENT.has(tag)) {
-      child.remove();
-      continue;
-    }
-
-    if (!ALLOWED_TAGS.has(tag)) {
-      // Unwrap: keep the text, drop the element.
-      child.replaceWith(node.ownerDocument.createTextNode(child.textContent ?? ''));
-      continue;
-    }
-
-    cleanElement(child);
-    clean(child);
-  }
-}
+// A tag: "<name>", "</name>" or "<name something>".
+const TAG_RE = /<(\/?)([a-zA-Z][a-zA-Z0-9]*)((?:\s[^>]*)?)>/g;
 
 /**
  * Turn an untrusted HTML string into a DocumentFragment that is safe to add
  * to the page.
- *
- * Unknown elements are unwrapped (their text is kept), dangerous elements
- * are removed with their content, event handler attributes are stripped and
- * links may only point at http(s), mailto or a relative path.
  */
 export function sanitizeToFragment(html) {
   const source = String(html ?? '');
@@ -111,29 +42,57 @@ export function sanitizeToFragment(html) {
     return fragment;
   }
 
-  if (typeof DOMParser === 'undefined') {
-    // No DOM available - fall back to plain text.
-    fragment.appendChild(document.createTextNode(source));
-    return fragment;
+  const root = document.createElement('div');
+  const stack = [root];
+
+  const appendText = (text) => {
+    if (text) {
+      stack[stack.length - 1].appendChild(document.createTextNode(text));
+    }
+  };
+
+  TAG_RE.lastIndex = 0;
+  let index = 0;
+  let match;
+
+  while ((match = TAG_RE.exec(source)) !== null) {
+    appendText(source.slice(index, match.index));
+    index = match.index + match[0].length;
+
+    const isClosing = match[1] === '/';
+    const name = match[2].toLowerCase();
+    const attributes = (match[3] || '').trim();
+
+    if (!ALLOWED_TAGS.has(name) || attributes !== '') {
+      // Not allowed: the markup is kept as literal text.
+      appendText(match[0]);
+      continue;
+    }
+
+    if (isClosing) {
+      // Close the nearest matching open element.
+      for (let i = stack.length - 1; i > 0; i -= 1) {
+        if (stack[i].tagName.toLowerCase() === name) {
+          stack.length = i;
+          break;
+        }
+      }
+      continue;
+    }
+
+    const element = document.createElement(name);
+    stack[stack.length - 1].appendChild(element);
+
+    if (!VOID_TAGS.has(name)) {
+      stack.push(element);
+    }
   }
 
-  const parsed = new DOMParser().parseFromString(source, 'text/html');
-  clean(parsed.body);
+  appendText(source.slice(index));
 
-  while (parsed.body.firstChild) {
-    // appendChild adopts the node into the current document.
-    fragment.appendChild(parsed.body.firstChild);
+  while (root.firstChild) {
+    fragment.appendChild(root.firstChild);
   }
 
   return fragment;
-}
-
-/** Escape a string so it can be inserted as text. */
-export function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
