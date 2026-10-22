@@ -1,9 +1,13 @@
 /**
  * TerraLens — HTML Sanitiser
  *
- * The Gemini responses are inserted into the page as HTML, so they have to be
- * filtered first: a model answer is not a trusted source of markup, and the
- * prompt is driven by what the user types.
+ * The Gemini responses are inserted into the page, so they have to be filtered
+ * first: a model answer is not a trusted source of markup, and the prompt is
+ * driven by what the user types.
+ *
+ * The sanitiser returns a DocumentFragment with the cleaned nodes, so the
+ * result is added to the page as real DOM nodes instead of being handed to
+ * innerHTML.
  */
 
 // Elements that may appear in a model answer.
@@ -71,50 +75,57 @@ function cleanElement(element) {
   }
 }
 
+function clean(node) {
+  for (const child of Array.from(node.children)) {
+    const tag = child.tagName.toUpperCase();
+
+    if (DROP_WITH_CONTENT.has(tag)) {
+      child.remove();
+      continue;
+    }
+
+    if (!ALLOWED_TAGS.has(tag)) {
+      // Unwrap: keep the text, drop the element.
+      child.replaceWith(node.ownerDocument.createTextNode(child.textContent ?? ''));
+      continue;
+    }
+
+    cleanElement(child);
+    clean(child);
+  }
+}
+
 /**
- * Return a version of `html` that is safe to insert with innerHTML.
+ * Turn an untrusted HTML string into a DocumentFragment that is safe to add
+ * to the page.
  *
  * Unknown elements are unwrapped (their text is kept), dangerous elements
  * are removed with their content, event handler attributes are stripped and
  * links may only point at http(s), mailto or a relative path.
  */
-export function sanitizeHtml(html) {
+export function sanitizeToFragment(html) {
   const source = String(html ?? '');
+  const fragment = document.createDocumentFragment();
 
   if (!source.trim()) {
-    return '';
+    return fragment;
   }
 
   if (typeof DOMParser === 'undefined') {
-    // No DOM available - fall back to escaping everything.
-    return escapeHtml(source);
+    // No DOM available - fall back to plain text.
+    fragment.appendChild(document.createTextNode(source));
+    return fragment;
   }
 
-  const document = new DOMParser().parseFromString(source, 'text/html');
+  const parsed = new DOMParser().parseFromString(source, 'text/html');
+  clean(parsed.body);
 
-  const clean = (node) => {
-    for (const child of Array.from(node.children)) {
-      const tag = child.tagName.toUpperCase();
+  while (parsed.body.firstChild) {
+    // appendChild adopts the node into the current document.
+    fragment.appendChild(parsed.body.firstChild);
+  }
 
-      if (DROP_WITH_CONTENT.has(tag)) {
-        child.remove();
-        continue;
-      }
-
-      if (!ALLOWED_TAGS.has(tag)) {
-        // Unwrap: keep the text, drop the element.
-        child.replaceWith(document.createTextNode(child.textContent ?? ''));
-        continue;
-      }
-
-      cleanElement(child);
-      clean(child);
-    }
-  };
-
-  clean(document.body);
-
-  return document.body.innerHTML;
+  return fragment;
 }
 
 /** Escape a string so it can be inserted as text. */
