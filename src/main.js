@@ -99,10 +99,7 @@ function initializeGemini() {
   const urlParams = new URLSearchParams(window.location.search);
   apiKey = urlParams.get('key');
   
-  // 2. Check localStorage
-  if (!apiKey) {
-    apiKey = localStorage.getItem('terralens_gemini_key');
-  }
+  // 2. (Removed: no longer persist API keys in browser storage for security)
   
   // 3. Check environment variable (Vite)
   if (!apiKey) {
@@ -162,7 +159,7 @@ function showApiKeyPrompt() {
       saveBtn.addEventListener('click', () => {
         const key = keyInput.value.trim();
         if (key) {
-          localStorage.setItem('terralens_gemini_key', key);
+          // Do not persist API keys in browser storage (security)
           const success = initGemini(key);
           if (success) {
             setupMsg.innerHTML = `
